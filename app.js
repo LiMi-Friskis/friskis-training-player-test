@@ -684,11 +684,67 @@ function renderModelsRegister(){
       <td><input data-f="unit_label" value="${escAttr(r.unit_label||'')}"></td>
       <td><input data-f="sort_order" type="number" value="${+r.sort_order||0}"></td>
       <td><span class="status ${r.is_active?'active':'inactive'}">${r.is_active?'Aktiv':'Inaktiv'}</span></td>
-      <td><div class="reg-actions">${registerRowActions('models',r.id,!!r.is_active)}<button class="smallbtn value-button ${activeIntensityModelId===r.id?'selected':''}" onclick="activeIntensityModelId='${r.id}';renderRegisterPane()">Värden</button></div></td>
+      <td><div class="reg-actions">${registerRowActions('models',r.id,!!r.is_active)}${isSuper()?`<button class="smallbtn" onclick="copyIntensityModel('${r.id}')">Kopiera</button>`:''}<button class="smallbtn value-button ${activeIntensityModelId===r.id?'selected':''}" onclick="activeIntensityModelId='${r.id}';renderRegisterPane()">Värden</button></div></td>
     </tr>`).join('')}
     </tbody></table></div>
     ${activeIntensityModelId?renderIntensityValues(activeIntensityModelId):''}
   </div>`;
+}
+
+// Beta 1.03: copy model and values as an unsaved draft; nothing is written until Save.
+let intensityCopyDraft=null;
+function copyIntensityModel(id){
+ if(!isSuper())return;
+ const source=registries.models.find(m=>m.id===id);if(!source)return;
+ const baseCode=safeCode(source.code||source.name)||'modell';
+ let code=baseCode+'_kopia',n=2;
+ while(registries.models.some(m=>m.code===code)){code=baseCode+'_kopia_'+n++;}
+ intensityCopyDraft={sourceId:id,name:(source.name||'Modell')+' – kopia',code,value_mode:source.value_mode||'exact',unit_label:source.unit_label||'',is_active:source.is_active!==false,sort_order:Math.max(0,...registries.models.map(m=>+m.sort_order||0))+10,values:registries.values.filter(v=>v.intensity_model_id===id).sort(regSort).map(v=>({label:v.label||'',code:v.code||'',numeric_value:v.numeric_value,min_value:v.min_value,max_value:v.max_value,description:v.description||'',color_hex:v.color_hex||'#888888',text_color_hex:v.text_color_hex||'#ffffff',sort_order:v.sort_order||0,is_active:v.is_active!==false}))};
+ renderIntensityCopyDraft();
+}
+function closeIntensityCopyDraft(){intensityCopyDraft=null;document.querySelector('#intensityCopyOverlay')?.remove()}
+function renderIntensityCopyDraft(){
+ const d=intensityCopyDraft;if(!d)return;
+ document.querySelector('#intensityCopyOverlay')?.remove();
+ const overlay=document.createElement('div');overlay.id='intensityCopyOverlay';
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.84);z-index:99999;overflow:auto;padding:22px;box-sizing:border-box';
+ overlay.innerHTML=`<div class="adminbox register-box" style="max-width:1100px;margin:0 auto;padding:22px"><h2>Kopiera intensitetsmodell</h2><p class="muted">Kopian skapas först när du klickar på SPARA KOPIA. Originalet ändras inte.</p>
+ <div class="meta-grid"><div class="field"><label>Namn</label><input data-copy="name" value="${escAttr(d.name)}"></div><div class="field"><label>Kod</label><input data-copy="code" value="${escAttr(d.code)}"></div><div class="field"><label>Typ</label><select data-copy="value_mode"><option value="exact" ${d.value_mode==='exact'?'selected':''}>Exakt</option><option value="zone" ${d.value_mode==='zone'?'selected':''}>Zon</option><option value="range" ${d.value_mode==='range'?'selected':''}>Intervall</option></select></div><div class="field"><label>Enhet</label><input data-copy="unit_label" value="${escAttr(d.unit_label)}"></div></div>
+ <div style="overflow-x:auto;margin-top:18px"><table class="admin-table register-table"><thead><tr><th>Etikett</th><th>Kod</th><th>Värde</th><th>Från</th><th>Till</th><th>Beskrivning</th><th>Färg</th><th>Textfärg</th><th>Ordning</th></tr></thead><tbody>${d.values.map((v,i)=>`<tr data-copy-value="${i}">${['label','code','numeric_value','min_value','max_value','description','color_hex','text_color_hex','sort_order'].map(f=>`<td><input data-cf="${f}" ${['numeric_value','min_value','max_value','sort_order'].includes(f)?'type="number" step="any"':''} value="${escAttr(v[f]??'')}" style="min-width:${f==='description'?'135':'65'}px"></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+ <div class="actions" style="margin-top:20px"><button class="primary" id="saveIntensityCopyBtn" onclick="saveIntensityCopyDraft()">SPARA KOPIA</button><button onclick="closeIntensityCopyDraft()">AVBRYT</button></div></div>`;
+ document.body.appendChild(overlay);
+}
+async function saveIntensityCopyDraft(){
+ if(!isSuper()||!intensityCopyDraft)return;
+ const overlay=document.querySelector('#intensityCopyOverlay');if(!overlay)return;
+ const d=intensityCopyDraft;
+ const field=f=>overlay.querySelector(`[data-copy="${f}"]`)?.value?.trim()||'';
+ const name=field('name'),code=safeCode(field('code')),value_mode=field('value_mode'),unit_label=field('unit_label');
+ if(!name||!code){alert('Ange både namn och kod.');return}
+ if(registries.models.some(m=>m.code===code)){alert('Koden används redan. Välj en unik kod.');return}
+ const values=[...overlay.querySelectorAll('[data-copy-value]')].map((tr,i)=>{
+  const v={...d.values[i]};
+  for(const f of ['label','code','numeric_value','min_value','max_value','description','color_hex','text_color_hex','sort_order']){
+   const raw=tr.querySelector(`[data-cf="${f}"]`)?.value??'';
+   v[f]=['numeric_value','min_value','max_value','sort_order'].includes(f)?(raw.trim()===''?null:Number(raw)):raw.trim();
+  }
+  return v;
+ });
+ if(values.some(v=>!v.label||!v.code)){alert('Alla nivåer behöver etikett och kod.');return}
+ const btn=overlay.querySelector('#saveIntensityCopyBtn');btn.disabled=true;btn.textContent='SPARAR…';
+ let createdId=null;
+ try{
+  const inserted=await api('intensity_models',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name,code,value_mode,unit_label,is_active:d.is_active,sort_order:d.sort_order})});
+  createdId=inserted?.[0]?.id;
+  if(!createdId)throw Error('Modellen skapades men inget ID returnerades. Kontrollera Supabase.');
+  if(values.length){await api('intensity_values',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(values.map(v=>({...v,intensity_model_id:createdId})))});}
+  closeIntensityCopyDraft();await loadRegistries();activeIntensityModelId=createdId;renderRegisterPane();
+ }catch(e){
+  // Avoid an incomplete model if copying the values fails. Never touch the source model.
+  if(createdId){try{await api('intensity_models?id=eq.'+encodeURIComponent(createdId),{method:'DELETE',headers:{Prefer:'return=minimal'}})}catch(_){alert('En ofullständig kopia kan finnas i registret. Kontrollera innan du försöker igen.')}}
+  alert('Kunde inte spara kopian: '+e.message);
+  if(btn){btn.disabled=false;btn.textContent='SPARA KOPIA'}
+ }
 }
 
 function renderIntensityValues(modelId){
