@@ -507,3 +507,7 @@ select.borginput{
 .terrain-container.editor-profile{height:155px}
 .live:has(.terrain-svg) .borgBig{font-size:clamp(26px,3.4vw,52px)}
 .dashboard:has(.terrain-svg) .ring-borg{font-size:clamp(15px,2vw,28px)}
+
+/* Beta 1.03 test: terrain import mode */
+.music-terrain-choice{display:flex;align-items:center;gap:12px;margin:18px 0;padding:15px 18px;border:1px solid #34414a;border-radius:12px;background:#172027;font-weight:700;cursor:pointer}
+.music-terrain-choice input{width:20px;height:20px;accent-color:#ed1639}

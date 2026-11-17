@@ -356,12 +356,34 @@ function ftpIntensityCode(value,modelId){
 function musicPreviewRow(x,i){
   return `<tr data-music-row="${i}"><td class="music-order">${i+1}</td><td><select onchange="musicImportDraft.items[${i}].type=this.value;showMusicImportPreview()"><option value="track" ${x.type==='track'?'selected':''}>Låt</option><option value="pause" ${x.type==='pause'?'selected':''}>PAUSE</option></select></td><td>${x.type==='track'?`<input value="${escAttr(x.artist||'')}" oninput="musicImportDraft.items[${i}].artist=this.value">`:''}</td><td>${x.type==='track'?`<input value="${escAttr(x.title||'')}" oninput="musicImportDraft.items[${i}].title=this.value">`:'<b>PAUSE</b>'}</td><td><input class="music-time-input" value="${musicDurationText(x.duration_sec)}" onblur="musicImportDraft.items[${i}].duration_sec=parseMusicDuration(this.value);this.value=musicDurationText(musicImportDraft.items[${i}].duration_sec);refreshMusicStats()"></td><td>${x.confidence!=null&&x.confidence<.8?'<span class="music-review">Kontrollera</span>':'<span class="music-ok">OK</span>'}</td><td><button class="iconbtn small danger" onclick="removeMusicItem(${i})">×</button></td></tr>`;
 }
+function setTerrainMusicMode(checked){
+ if(!musicImportDraft)return;
+ musicImportDraft.terrainMode=!!checked;
+ showMusicImportPreview();
+}
+function createTerrainDraftFromMusic(){
+ if(!isSuper()||!musicImportDraft)return;
+ const items=musicImportDraft.items.filter(x=>x.type==='track');
+ if(!items.length||items.some(x=>!(+x.duration_sec>0))){alert('Alla låtar måste ha giltiga tider.');return}
+ const model=registries.models.find(x=>x.code==='borg');
+ if(!model){alert('Borg-modellen saknas i registret.');return}
+ const spin=registries.activities.find(x=>x.code==='spinning')||registries.activities[0];
+ const allowed=registries.values.filter(v=>v.intensity_model_id===model.id&&v.is_active!==false&&v.numeric_value!=null).map(v=>+v.numeric_value);
+ const parts=items.map((x,i)=>{
+  const raw=Number(x.terrainBorg??12),borg=allowed.length?allowed.reduce((best,n)=>Math.abs(n-raw)<Math.abs(best-raw)?n:best,allowed[0]):Math.max(6,Math.min(20,raw));
+  const label=musicTrackDescription(x);
+  return {id:Date.now()+i+Math.random(),time:fmt(+x.duration_sec),borg,intensity:'',moment:String(x.terrainMoment||'').trim(),instruction:label,presentation_mode:'terrain',music_labels:[label],music_refs:[]};
+ });
+ active={i:null,p:{id:null,name:musicImportDraft.title||'Terrängpass',parts,owner_id:auth.user.id,visibility:'private',activity_type_id:spin?.id||null,intensity_model_id:model.id,remote:false}};
+ musicImportDraft=null;setAppBrand();setHomeButton(true);drawEdit();
+}
 function showMusicImportPreview(){
   if(!musicImportDraft){showMusicImport();return}
   setBrand('FRISKIS TRAINING PLAYER','MUSIC IMPORT v0.1');setHomeButton(true);const c=musicCounts(musicImportDraft.items);
   app.innerHTML=`${userTools()}<div class="music-import-shell wide"><div class="music-step">2 AV 3 · GRANSKA</div><div class="toprow"><div><h1>${escAttr(musicImportDraft.title)}</h1><div class="muted">Kontrollera AI-tolkningen innan passet skapas.${musicImportDraft.deduplicated_count?` · ${musicImportDraft.deduplicated_count} överlappande poster togs bort.`:''}</div></div><div id="musicStats" class="music-stats"><b>${c.tracks} låtar</b><span>${c.pauses} pauser</span><span>${fmt(c.total)}</span></div></div>
-  <div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Typ</th><th>Artist</th><th>Titel</th><th>Tid</th><th>Status</th><th></th></tr></thead><tbody>${musicImportDraft.items.map(musicPreviewRow).join('')}</tbody></table></div>
-  <div class="music-preview-actions"><button onclick="addMusicItem('track')">+ LÅT</button><button onclick="addMusicItem('pause')">+ PAUSE</button><span class="spacer"></span><button onclick="showMusicImport()">TILLBAKA</button><button class="primary" onclick="createPassFromMusic()">SKAPA PASS</button></div></div>`;
+  <label class="music-terrain-choice"><input type="checkbox" ${musicImportDraft.terrainMode?'checked':''} onchange="setTerrainMusicMode(this.checked)"> En låt per intervall – skapa Terrängprofil (Borg)</label>
+  ${musicImportDraft.terrainMode?`<p class="muted">Fyll i eller justera Borg och terrängmoment för varje låt. Låttiderna blir intervalltider. Passet öppnas i editorn utan att sparas.</p><div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Låt</th><th>Tid</th><th>Borg</th><th>Terräng / moment</th></tr></thead><tbody>${musicImportDraft.items.filter(x=>x.type==='track').map((x,i)=>`<tr><td>${i+1}</td><td>${escAttr(musicTrackDescription(x))}</td><td>${musicDurationText(x.duration_sec)}</td><td><input type="number" min="6" max="20" style="width:75px" value="${Number(x.terrainBorg??12)}" onchange="this.value=Math.max(6,Math.min(20,Number(this.value)||12));musicImportDraft.items.find(y=>y._id==='${x._id}').terrainBorg=Number(this.value)"></td><td><input placeholder="T.ex. Raksträcka, Backe – sittande" value="${escAttr(x.terrainMoment||'')}" oninput="musicImportDraft.items.find(y=>y._id==='${x._id}').terrainMoment=this.value"></td></tr>`).join('')}</tbody></table></div>`:`<div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Typ</th><th>Artist</th><th>Titel</th><th>Tid</th><th>Status</th><th></th></tr></thead><tbody>${musicImportDraft.items.map(musicPreviewRow).join('')}</tbody></table></div>`}
+  <div class="music-preview-actions"><button onclick="addMusicItem('track')">+ LÅT</button><button onclick="addMusicItem('pause')">+ PAUSE</button><span class="spacer"></span><button onclick="showMusicImport()">TILLBAKA</button><button class="primary" onclick="${musicImportDraft.terrainMode?'createTerrainDraftFromMusic()':'createPassFromMusic()'}">${musicImportDraft.terrainMode?'ÖPPNA I EDITORN':'SKAPA PASS'}</button></div></div>`;
 }
 function refreshMusicStats(){const el=document.querySelector('#musicStats');if(!el)return;const c=musicCounts(musicImportDraft.items);el.innerHTML=`<b>${c.tracks} låtar</b><span>${c.pauses} pauser</span><span>${fmt(c.total)}</span>`}
 function removeMusicItem(i){musicImportDraft.items.splice(i,1);showMusicImportPreview()}
@@ -837,7 +859,17 @@ function terrainSvg(p){
  const starts=[0];parts.forEach(x=>starts.push(starts.at(-1)+Math.max(0,sec(x.time))));
  const levels=parts.map(x=>Math.max(6,Math.min(20,+x.borg||12)));
  function levelAt(t){let i=starts.findIndex((v,j)=>j<parts.length&&t>=v&&t<starts[j+1]);return levels[Math.max(0,i<0?parts.length-1:i)]}
- function smooth(t){const sigma=48;let sum=0,weight=0;for(let k=-9;k<=9;k++){const dt=k*12,w=Math.exp(-.5*(dt/sigma)**2);sum+=levelAt(Math.max(0,Math.min(T-.001,t+dt)))*w;weight+=w}return sum/weight}
+ // Continuous smoothstep transition: no stair-stepping from discrete time samples.
+ function smooth(t){
+  const width=Math.min(70,Math.max(15,T/16));
+  let value=levels[0];
+  for(let i=1;i<levels.length;i++){
+   const z=Math.max(0,Math.min(1,(t-(starts[i]-width))/(2*width)));
+   const eased=z*z*(3-2*z);
+   value+=(levels[i]-levels[i-1])*eased;
+  }
+  return value;
+ }
  const y=b=>Math.max(18,Math.min(base-8,211-(b-9)*17.5));
  const pts=Array.from({length:701},(_,i)=>({x:W*i/700,y:y(smooth(T*i/700))}));
  const line='M '+pts.map(v=>v.x.toFixed(2)+' '+v.y.toFixed(2)).join(' L ');
