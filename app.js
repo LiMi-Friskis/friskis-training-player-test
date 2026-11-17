@@ -239,7 +239,7 @@ let musicSelectedFiles=[];
 function showMusicImport(){
   if(!auth){login();return}
   if(!isSuper()){alert('Filimport kräver Super User.');return}
-  stop();setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);musicImportDraft=null;musicSelectedFiles=[];
+  stop();setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3.1');setHomeButton(true);musicImportDraft=null;musicSelectedFiles=[];
   app.innerHTML=`${userTools()}<div class="music-import-shell"><div class="music-step">1 AV 3 · FILER</div><h1>Skapa pass från fil</h1><p class="muted">Importera träningsscheman eller musiklistor som PDF, PNG, JPG eller WEBP. Sidnummer används för att sortera schemat.</p>
   <div class="music-upload-card"><label class="music-drop" id="musicDropZone" for="musicScreenshots" ondragenter="musicDragEnter(event)" ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)"><b>📄 Dra filer hit eller klicka för att välja</b><span>PDF, PNG, JPG, WEBP · högst 10 filer</span></label><input id="musicScreenshots" class="sr-only" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" multiple onchange="setMusicFiles(this.files)"><div id="musicFilePreview" class="music-file-preview"></div></div>
   <div class="music-upload-card"><h3>Terrängpass från två underlag</h3><p class="muted">Har du en separat musiklista och ett handskrivet schema? Använd kombinerad import för att matcha dem låt för låt.</p><button onclick="showCombinedTerrainImport()">KOMBINERA MUSIKLISTA + TRÄNINGSSCHEMA</button></div>
@@ -248,7 +248,7 @@ function showMusicImport(){
 let combinedMusicFiles=[],combinedScheduleFiles=[];
 function showCombinedTerrainImport(){
  if(!isSuper())return;
- setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);
+ setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3.1');setHomeButton(true);
  app.innerHTML=`${userTools()}<div class="music-import-shell"><div class="music-step">TERRÄNGPASS · TVÅ UNDERLAG</div><h1>Kombinera musik och träningsschema</h1><p class="muted">En låt motsvarar ett intervall. Låtarnas tider gäller; schemat ger moment och föreslagen intensitet. Granska alltid AI-tolkningen.</p><div class="music-upload-card"><label><b>1. Musiklista (PDF eller bild)</b></label><input type="file" accept="application/pdf,image/*" multiple onchange="combinedMusicFiles=[...this.files]"></div><div class="music-upload-card"><label><b>2. Träningsschema (PDF eller bild)</b></label><input type="file" accept="application/pdf,image/*" multiple onchange="combinedScheduleFiles=[...this.files]"><p class="muted">Handskrivna scheman utan tydliga tabeller kan behöva kompletteras manuellt.</p></div><div class="actions"><button class="primary" id="combinedAnalyze" onclick="analyzeCombinedTerrain()">ANALYSERA OCH MATCHA</button><button onclick="showMusicImport()">TILLBAKA</button></div></div>`;
 }
 function terrainSuggestedBorg(row,previous=12){
@@ -381,7 +381,7 @@ function chooseScheduleIntensity(){
  const ftp=d.rows.some(r=>r.ftp_percent!=null&&r.ftp_percent!=='');
  if(!borg&&!ftp){alert('Inga Borg- eller FTP-värden hittades. Kontrollera underlaget.');return}
  if(borg&&ftp){
-  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);
+  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3.1');setHomeButton(true);
   app.innerHTML=`<div class="music-import-shell" style="max-width:680px;margin:8vh auto"><div class="music-step">VÄLJ INTENSITETSMODELL</div><h1>Borg och FTP har upptäckts</h1><p class="muted">Vilken intensitetsmodell vill du använda för det importerade passet?</p><div class="actions"><button class="primary" onclick="openImportedSchedule('borg')">BORG (6–20)</button><button class="primary" onclick="openImportedSchedule('ftp')">% FTP</button><button onclick="showMusicImport()">AVBRYT</button></div></div>`;
  }else openImportedSchedule(borg?'borg':'ftp');
 }
@@ -440,7 +440,7 @@ function createTerrainDraftFromMusic(){
 }
 function showMusicImportPreview(){
   if(!musicImportDraft){showMusicImport();return}
-  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);const c=musicCounts(musicImportDraft.items);
+  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3.1');setHomeButton(true);const c=musicCounts(musicImportDraft.items);
   app.innerHTML=`${userTools()}<div class="music-import-shell wide"><div class="music-step">2 AV 3 · GRANSKA</div><div class="toprow"><div><h1>${escAttr(musicImportDraft.title)}</h1><div class="muted">Kontrollera AI-tolkningen innan passet skapas.${musicImportDraft.deduplicated_count?` · ${musicImportDraft.deduplicated_count} överlappande poster togs bort.`:''}</div></div><div id="musicStats" class="music-stats"><b>${c.tracks} låtar</b><span>${c.pauses} pauser</span><span>${fmt(c.total)}</span></div></div>
   ${musicImportDraft.combinedMode?`<p class="muted"><b>Matchning:</b> ${musicImportDraft.items.length} låtar · ${musicImportDraft.combinedScheduleCount} schemarader. ${escAttr(musicImportDraft.combinedWarning||"Borg-värden utan angiven siffra är förslag, inte uppmätta värden.")}</p>`:""}
   <label class="music-terrain-choice"><input type="checkbox" ${musicImportDraft.terrainMode?'checked':''} onchange="setTerrainMusicMode(this.checked)"> En låt per intervall – skapa Terrängprofil (Borg)</label>
@@ -531,7 +531,7 @@ async function updateAutoProSetting(input){
   finally{input.disabled=false}
 }
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
-function showHelp(){setAppBrand();setHomeButton(true);app.innerHTML=`<div class="helpbox"><h1>Friskis Training Player</h1><p><b>Beta 1.03 · Test 3</b></p><p>Skapa, redigera och kör träningspass med valbar aktivitet och intensitetsmodell. Borg använder exakta nivåer och FTP zoner i % FTP.</p><p class="muted">Admin och Super User kan under Registervård administrera aktiviteter, intensitetsmodeller, intensitetsvärden, moment och beskrivningsförslag.</p><p class="muted">Publika pass kan köras utan inloggning. Inloggning krävs för att skapa eller redigera pass.</p><h3>Om</h3><p>Utvecklad av LiMi Equus AB</p><div class="copyright">© 2026 LiMi Equus AB. Alla rättigheter förbehållna.</div><div class="actions"><button class="primary" onclick="list()">MINA PASS</button></div></div>`}
+function showHelp(){setAppBrand();setHomeButton(true);app.innerHTML=`<div class="helpbox"><h1>Friskis Training Player</h1><p><b>Beta 1.03 · Test 3.1</b></p><p>Skapa, redigera och kör träningspass med valbar aktivitet och intensitetsmodell. Borg använder exakta nivåer och FTP zoner i % FTP.</p><p class="muted">Admin och Super User kan under Registervård administrera aktiviteter, intensitetsmodeller, intensitetsvärden, moment och beskrivningsförslag.</p><p class="muted">Publika pass kan köras utan inloggning. Inloggning krävs för att skapa eller redigera pass.</p><h3>Om</h3><p>Utvecklad av LiMi Equus AB</p><div class="copyright">© 2026 LiMi Equus AB. Alla rättigheter förbehållna.</div><div class="actions"><button class="primary" onclick="list()">MINA PASS</button></div></div>`}
 
 function fmtDateTime(value){
   if(!value)return '—';
@@ -920,15 +920,25 @@ async function deleteRemote(p){
 
 function intensityModel(p){return registries.models.find(x=>x.id===p.intensity_model_id)}
 function intensityValues(p){return registries.values.filter(v=>v.intensity_model_id===p.intensity_model_id&&v.is_active!==false).sort(regSort)}
+// A Borg-compatible model is defined by its exact numeric scale, not by its code/name.
+// This also supports copied models (e.g. Soft) with custom colours.
+function isBorgScale(p){
+ const m=intensityModel(p);
+ if(!m)return true;
+ if(m.value_mode!=='exact')return false;
+ const vals=intensityValues(p);
+ const numbers=new Set(vals.map(v=>Number(v.numeric_value)).filter(Number.isFinite));
+ return numbers.size===15 && Array.from({length:15},(_,i)=>i+6).every(n=>numbers.has(n));
+}
 function intensityValue(p,part){
   const model=intensityModel(p);
-  if(!model||model.code==='borg') return intensityValues(p).find(v=>+v.numeric_value===+part.borg)||null;
+  if(isBorgScale(p)) return intensityValues(p).find(v=>+v.numeric_value===+part.borg)||null;
   const vals=intensityValues(p);
   return vals.find(v=>v.code===part.intensity||v.id===part.intensity||v.label===part.intensity)||vals[0]||null;
 }
 function intensityLabel(p,part){
   const model=intensityModel(p);
-  if(!model||model.code==='borg')return String(part.borg??'');
+  if(isBorgScale(p))return String(part.borg??'');
   const v=intensityValue(p,part); if(!v)return part.intensity||'—';
   const unit=model.unit_label||'';
   let range='';
@@ -937,9 +947,9 @@ function intensityLabel(p,part){
   else if(v.min_value!=null)range=`>${v.min_value} ${unit}`;
   return `${v.label}${range?' · '+range:''}`;
 }
-function intensityShort(p,part){const m=intensityModel(p);return (!m||m.code==='borg')?String(part.borg??''):intensityValue(p,part)?.label||part.intensity||'—'}
+function intensityShort(p,part){const m=intensityModel(p);return (isBorgScale(p))?String(part.borg??''):intensityValue(p,part)?.label||part.intensity||'—'}
 function intensityRange(p,part){
-  const m=intensityModel(p);if(!m||m.code==='borg')return '';
+  const m=intensityModel(p);if(isBorgScale(p))return '';
   const v=intensityValue(p,part);if(!v)return '';
   const unit=m.code==='ftp'?'%':(m.unit_label||'');
   if(v.min_value==null&&v.max_value!=null)return `≤ ${v.max_value} ${unit}`.trim();
@@ -954,14 +964,14 @@ function zoneTextClass(p,part){
   if(t.length>=7)return 'zone-medium';
   return ''
 }
-function intensityColor(p,part){const m=intensityModel(p),v=intensityValue(p,part);if(!m||m.code==='borg')return v?.color_hex||color(part.borg);return v?.color_hex||'#888888'}
-function intensityHeight(p,part){const m=intensityModel(p);if(!m||m.code==='borg')return Math.max(15,(part.borg-6)/14*100);const vals=intensityValues(p),v=intensityValue(p,part),i=Math.max(0,vals.findIndex(x=>x.id===v?.id));return vals.length?Math.max(20,((i+1)/vals.length)*100):50}
-function intensityHeading(p){const m=intensityModel(p);return (!m||m.code==='borg')?'BORG':(m.name||'INTENSITET').toUpperCase()}
+function intensityColor(p,part){const m=intensityModel(p),v=intensityValue(p,part);if(isBorgScale(p))return v?.color_hex||color(part.borg);return v?.color_hex||'#888888'}
+function intensityHeight(p,part){const m=intensityModel(p);if(isBorgScale(p))return Math.max(15,(part.borg-6)/14*100);const vals=intensityValues(p),v=intensityValue(p,part),i=Math.max(0,vals.findIndex(x=>x.id===v?.id));return vals.length?Math.max(20,((i+1)/vals.length)*100):50}
+function intensityHeading(p){const m=intensityModel(p);return (isBorgScale(p))?'BORG':(m.name||'INTENSITET').toUpperCase()}
 // Beta 1.03: presentation metadata lives in the existing parts JSON, avoiding DB migrations.
-function terrainEnabled(p){return p?.parts?.[0]?.presentation_mode==='terrain' && (!intensityModel(p)||intensityModel(p).code==='borg')}
+function terrainEnabled(p){return p?.parts?.[0]?.presentation_mode==='terrain' && isBorgScale(p)}
 function setPresentationMode(value){
  const p=active?.p;if(!p?.parts?.length)return;
- if(value==='terrain' && intensityModel(p)?.code!=='borg'){alert('Terrängprofil använder Borg som intensitetsmodell.');return}
+ if(value==='terrain' && !isBorgScale(p)){alert('Terrängprofil använder Borg som intensitetsmodell.');return}
  p.parts.forEach(x=>{if(value==='terrain')x.presentation_mode='terrain';else delete x.presentation_mode});
  drawEdit();
 }
@@ -1036,12 +1046,12 @@ async function edit(i){
 }
 function escAttr(v){return String(v??'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
 function drawEdit(focus=null){
-  let p=active.p; const model=registries.models.find(x=>x.id===p.intensity_model_id); const isBorg=!model||model.code==='borg';
+  let p=active.p; const model=registries.models.find(x=>x.id===p.intensity_model_id); const isBorg=isBorgScale(p);
   const pageTitle=active.i==null?'Skapa nytt pass':'Redigera pass';
   app.innerHTML=`<div class="editor-head"><div><h1>${pageTitle}</h1><div class="muted">Direktredigera tabellen. Moment och beskrivning har förslag men tillåter egen text.</div></div></div><div class="editor">
   <input class="name" id="pname" value="${escAttr(p.name)}" oninput="active.p.name=this.value">
   ${p.music_import?`<div class="music-editor-summary"><span>🎵</span><div><b>${escAttr(p.music_import.title||'Importerad musiklista')}</b><small>${p.music_import.track_count||0} låtar${p.music_import.pause_count?` · ${p.music_import.pause_count} pauser`:''} · ${fmt(p.music_import.total_sec||0)}</small></div></div>`:''}
-  <div class="meta-grid"><div class="field"><label>Aktivitet</label><select onchange="active.p.activity_type_id=this.value;drawEdit()">${registries.activities.filter(x=>x.is_active!==false).map(x=>`<option value="${x.id}" ${x.id===p.activity_type_id?'selected':''}>${x.name}</option>`).join('')}</select></div><div class="field"><label>Intensitetsmodell</label><select onchange="active.p.intensity_model_id=this.value;if(registries.models.find(x=>x.id===this.value)?.code!=='borg')active.p.parts.forEach(x=>delete x.presentation_mode);const v=intensityValues(active.p)[0];if(v)active.p.parts.forEach(x=>x.intensity=v.code);drawEdit()">${registries.models.filter(x=>x.is_active!==false).map(x=>`<option value="${x.id}" ${x.id===p.intensity_model_id?'selected':''}>${x.name}</option>`).join('')}</select></div><div class="field"><label>Visning</label><select onchange="setPresentationMode(this.value)"><option value="bars" ${!terrainEnabled(p)?'selected':''}>Staplar (standard)</option>${isBorg?`<option value="terrain" ${terrainEnabled(p)?'selected':''}>Terrängprofil</option>`:''}</select></div>${isSuper()?`<div class="field owner-field"><label>Ägare</label><select onchange="active.p.owner_id=this.value">${profiles.filter(x=>x.is_active!==false).map(x=>`<option value="${x.user_id}" ${x.user_id===p.owner_id?'selected':''}>${escAttr(x.display_name||'Användare')} · ${roleLabel(x.role)}</option>`).join('')}</select></div>`:`<div class="field owner-field"><label>Ägare</label><div class="readonly-field">${escAttr(ownerName(p))}</div></div>`}</div>
+  <div class="meta-grid"><div class="field"><label>Aktivitet</label><select onchange="active.p.activity_type_id=this.value;drawEdit()">${registries.activities.filter(x=>x.is_active!==false).map(x=>`<option value="${x.id}" ${x.id===p.activity_type_id?'selected':''}>${x.name}</option>`).join('')}</select></div><div class="field"><label>Intensitetsmodell</label><select onchange="active.p.intensity_model_id=this.value;if(!isBorgScale(active.p))active.p.parts.forEach(x=>delete x.presentation_mode);const v=intensityValues(active.p)[0];if(v)active.p.parts.forEach(x=>x.intensity=v.code);drawEdit()">${registries.models.filter(x=>x.is_active!==false).map(x=>`<option value="${x.id}" ${x.id===p.intensity_model_id?'selected':''}>${x.name}</option>`).join('')}</select></div><div class="field"><label>Visning</label><select onchange="setPresentationMode(this.value)"><option value="bars" ${!terrainEnabled(p)?'selected':''}>Staplar (standard)</option>${isBorg?`<option value="terrain" ${terrainEnabled(p)?'selected':''}>Terrängprofil</option>`:''}</select></div>${isSuper()?`<div class="field owner-field"><label>Ägare</label><select onchange="active.p.owner_id=this.value">${profiles.filter(x=>x.is_active!==false).map(x=>`<option value="${x.user_id}" ${x.user_id===p.owner_id?'selected':''}>${escAttr(x.display_name||'Användare')} · ${roleLabel(x.role)}</option>`).join('')}</select></div>`:`<div class="field owner-field"><label>Ägare</label><div class="readonly-field">${escAttr(ownerName(p))}</div></div>`}</div>
   <div class="visibility"><b>Synlighet:</b><label><input type="radio" name="vis" ${p.visibility!=='private'?'checked':''} onchange="active.p.visibility='public'"> 🌐 Publikt</label><label><input type="radio" name="vis" ${p.visibility==='private'?'checked':''} onchange="active.p.visibility='private'"> 🔒 Privat</label></div>
   ${profileMarkup(p,'profile editor-profile')}
   <div class="row row-head"><span>#</span><span>Tid</span><span>Intensitet</span><span>Moment</span><span>Beskrivning</span><span></span></div>
@@ -1256,9 +1266,9 @@ function blockIndexAtMs(positionMs){
 function snapshotBlock(part,index,p){
   const m=intensityModel(p),v=intensityValue(p,part);
   const targets={
-    intensityCode:(!m||m.code==='borg')?String(part.borg??''):String(part.intensity||v?.code||''),
+    intensityCode:(isBorgScale(p))?String(part.borg??''):String(part.intensity||v?.code||''),
     intensityLabel:intensityLabel(p,part)||'',
-    intensityValue:(!m||m.code==='borg')?(Number(part.borg)||null):(v?.numeric_value??null),
+    intensityValue:(isBorgScale(p))?(Number(part.borg)||null):(v?.numeric_value??null),
     intensityMin:v?.min_value??null,
     intensityMax:v?.max_value??null,
     unit:m?.unit_label||''
