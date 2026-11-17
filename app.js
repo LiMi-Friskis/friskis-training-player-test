@@ -260,28 +260,47 @@ function terrainSuggestedBorg(row,previous=12){
  if(/öka|kadens|tempo|snabb/.test(t))return 14;
  return previous;
 }
-async function combinedUploads(files){
+async function combinedUploads(files,importMode){
  if(!files.length||files.length>10||files.some(f=>!validMusicImageFile(f)||f.size>10*1024*1024))throw Error('Välj 1–10 PDF- eller bildfiler, högst 10 MB per fil.');
  const uploads=[];for(const f of files)uploads.push({name:f.name,data_url:f.type==='application/pdf'||/\.pdf$/i.test(f.name)?await fileAsDataUrl(f):await optimizedImageDataUrl(f)});
- return musicImportEdge({files:uploads,title_hint:''});
+ return musicImportEdge({files:uploads,title_hint:'',import_mode:importMode});
 }
 async function analyzeCombinedTerrain(){
  const btn=document.querySelector('#combinedAnalyze');if(!combinedMusicFiles.length||!combinedScheduleFiles.length){alert('Välj både musiklista och träningsschema.');return}
  btn.disabled=true;btn.textContent='ANALYSERAR…';
  try{
-  const music=await combinedUploads(combinedMusicFiles);
+  const music=await combinedUploads(combinedMusicFiles,'terrain_music');
   const tracks=(music.items||[]).filter(x=>x.type==='track');
   if(!tracks.length)throw Error('Kunde inte identifiera låtar i musiklistan.');
   let schedule=null,warning='';
-  try{schedule=await combinedUploads(combinedScheduleFiles)}catch(e){warning='Schemat kunde inte tolkas automatiskt: '+e.message}
+  try{schedule=await combinedUploads(combinedScheduleFiles,'terrain_notes')}catch(e){warning='Schemat kunde inte tolkas automatiskt: '+e.message}
   const rows=schedule?.schedule_rows||[];
-  if(!rows.length)warning=warning||'Det handskrivna schemat gav inga strukturerade träningsrader. Fyll i moment och Borg manuellt i tabellen.';
-  let previous=12;
+  if(!rows.length)warning=warning||'Det handskrivna schemat gav inga träningsmoment. Kontrollera bilderna och fyll i manuellt.';
+  const numbers=tracks.map(x=>Number(x.track_number));
+  const hasNumbers=tracks.every(x=>Number.isInteger(Number(x.track_number))&&Number(x.track_number)>0);
+  const uniqueNumbers=hasNumbers&&new Set(numbers).size===numbers.length;
+  const rowNumbers=rows.map(r=>Number(r.row_number));
+  const numberedRows=rows.every(r=>Number.isInteger(Number(r.row_number))&&Number(r.row_number)>0);
+  const rowByNumber=new Map(numberedRows?rows.map(r=>[Number(r.row_number),r]):[]);
+  const warnings=[...(music.warnings||[])];
+  if(!uniqueNumbers)warnings.push('Låtnumreringen är ofullständig eller innehåller dubbletter. Kontrollera ordningen.');
+  if(rows.length!==tracks.length)warnings.push(`Antal låtar (${tracks.length}) skiljer sig från antal träningsmoment (${rows.length}).`);
+  if(!numberedRows&&rows.length)warnings.push('Alla träningsmoment saknar läsbara nummer. Matchning sker efter ordning.');
+  let previous=12,unmatched=0,unreadable=0;
   const items=tracks.map((x,i)=>{
-   const row=rows[i]||{};const borg=terrainSuggestedBorg(row,previous);previous=borg;
-   return {...x,_id:crypto.randomUUID(),terrainBorg:borg,terrainMoment:String(row.moment||row.description||'').trim(),order:i+1};
+   const row=numberedRows&&uniqueNumbers?rowByNumber.get(Number(x.track_number)):rows[i];
+   if(!row)unmatched++;
+   const rawMoment=String(row?.moment||row?.description||'').trim();
+   const direct=scheduleMidpoint(row?.borg);
+   const inferred=!!rawMoment&&/(nedvarv|återhämt|vila|uppvärm|lätt|lätta|nedför|brant|tung|sprint|max|backe|uppför|motstånd|öka|kadens|tempo|snabb|raksträcka)/i.test(rawMoment);
+   if(row&&!rawMoment&&direct==null)unreadable++;
+   const borg=direct!=null?Math.max(6,Math.min(20,direct)):inferred?terrainSuggestedBorg(row,previous):null;
+   if(borg!=null)previous=borg;
+   return {...x,_id:crypto.randomUUID(),terrainBorg:borg,terrainMoment:rawMoment,terrainNeedsReview:borg==null||!row,order:i+1};
   });
-  musicImportDraft={title:music.source_title||'Terrängpass',items,terrainMode:true,combinedMode:true,combinedWarning:warning,combinedScheduleCount:rows.length,deduplicated_count:music.deduplicated_count||0,screenshot_count:combinedMusicFiles.length};
+  if(unmatched)warnings.push(`${unmatched} låtar saknar matchande träningsmoment.`);
+  if(unreadable)warnings.push(`${unreadable} schemarader saknar tolkbar instruktion.`);
+  musicImportDraft={title:music.source_title||'Terrängpass',items,terrainMode:true,combinedMode:true,combinedWarning:[warning,...warnings].filter(Boolean).join(' '),combinedScheduleCount:rows.length,deduplicated_count:music.deduplicated_count||0,screenshot_count:combinedMusicFiles.length};
   showMusicImportPreview();
  }catch(e){alert('Kombinerad import misslyckades: '+e.message);btn.disabled=false;btn.textContent='ANALYSERA OCH MATCHA'}
 }
@@ -403,6 +422,7 @@ function setTerrainMusicMode(checked){
  showMusicImportPreview();
 }
 function createTerrainDraftFromMusic(){
+ if(musicImportDraft?.combinedMode&&musicImportDraft.items.some(x=>x.type==='track'&&(x.terrainBorg==null||!String(x.terrainMoment||'').trim()))){alert('Komplettera Borg och moment för alla låtar innan du öppnar passet i editorn.');return;}
  if(!isSuper()||!musicImportDraft)return;
  const items=musicImportDraft.items.filter(x=>x.type==='track');
  if(!items.length||items.some(x=>!(+x.duration_sec>0))){alert('Alla låtar måste ha giltiga tider.');return}
@@ -424,7 +444,7 @@ function showMusicImportPreview(){
   app.innerHTML=`${userTools()}<div class="music-import-shell wide"><div class="music-step">2 AV 3 · GRANSKA</div><div class="toprow"><div><h1>${escAttr(musicImportDraft.title)}</h1><div class="muted">Kontrollera AI-tolkningen innan passet skapas.${musicImportDraft.deduplicated_count?` · ${musicImportDraft.deduplicated_count} överlappande poster togs bort.`:''}</div></div><div id="musicStats" class="music-stats"><b>${c.tracks} låtar</b><span>${c.pauses} pauser</span><span>${fmt(c.total)}</span></div></div>
   ${musicImportDraft.combinedMode?`<p class="muted"><b>Matchning:</b> ${musicImportDraft.items.length} låtar · ${musicImportDraft.combinedScheduleCount} schemarader. ${escAttr(musicImportDraft.combinedWarning||"Borg-värden utan angiven siffra är förslag, inte uppmätta värden.")}</p>`:""}
   <label class="music-terrain-choice"><input type="checkbox" ${musicImportDraft.terrainMode?'checked':''} onchange="setTerrainMusicMode(this.checked)"> En låt per intervall – skapa Terrängprofil (Borg)</label>
-  ${musicImportDraft.terrainMode?`<p class="muted">Fyll i eller justera Borg och terrängmoment för varje låt. Låttiderna blir intervalltider. Passet öppnas i editorn utan att sparas.</p><div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Låt</th><th>Tid</th><th>Borg</th><th>Terräng / moment</th></tr></thead><tbody>${musicImportDraft.items.filter(x=>x.type==='track').map((x,i)=>`<tr><td>${i+1}</td><td>${escAttr(musicTrackDescription(x))}</td><td>${musicDurationText(x.duration_sec)}</td><td><input type="number" min="6" max="20" style="width:75px" value="${Number(x.terrainBorg??12)}" onchange="this.value=Math.max(6,Math.min(20,Number(this.value)||12));musicImportDraft.items.find(y=>y._id==='${x._id}').terrainBorg=Number(this.value)"></td><td><input placeholder="T.ex. Raksträcka, Backe – sittande" value="${escAttr(x.terrainMoment||'')}" oninput="musicImportDraft.items.find(y=>y._id==='${x._id}').terrainMoment=this.value"></td></tr>`).join('')}</tbody></table></div>`:`<div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Typ</th><th>Artist</th><th>Titel</th><th>Tid</th><th>Status</th><th></th></tr></thead><tbody>${musicImportDraft.items.map(musicPreviewRow).join('')}</tbody></table></div>`}
+  ${musicImportDraft.terrainMode?`<p class="muted">Fyll i eller justera Borg och terrängmoment för varje låt. Låttiderna blir intervalltider. Passet öppnas i editorn utan att sparas.</p><div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Låt</th><th>Tid</th><th>Borg</th><th>Terräng / moment</th></tr></thead><tbody>${musicImportDraft.items.filter(x=>x.type==='track').map((x,i)=>`<tr><td>${i+1}</td><td>${escAttr(musicTrackDescription(x))}</td><td>${musicDurationText(x.duration_sec)}</td><td><input type="number" min="6" max="20" style="width:75px" value="${x.terrainBorg==null?'':Number(x.terrainBorg)}" onchange="musicImportDraft.items.find(y=>y._id==='${x._id}').terrainBorg=this.value===''?null:Math.max(6,Math.min(20,Number(this.value)));"></td><td><input placeholder="T.ex. Raksträcka, Backe – sittande" value="${escAttr(x.terrainMoment||'')}" oninput="musicImportDraft.items.find(y=>y._id==='${x._id}').terrainMoment=this.value"></td></tr>`).join('')}</tbody></table></div>`:`<div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Typ</th><th>Artist</th><th>Titel</th><th>Tid</th><th>Status</th><th></th></tr></thead><tbody>${musicImportDraft.items.map(musicPreviewRow).join('')}</tbody></table></div>`}
   <div class="music-preview-actions"><button onclick="addMusicItem('track')">+ LÅT</button><button onclick="addMusicItem('pause')">+ PAUSE</button><span class="spacer"></span><button onclick="showMusicImport()">TILLBAKA</button><button class="primary" onclick="${musicImportDraft.terrainMode?'createTerrainDraftFromMusic()':'createPassFromMusic()'}">${musicImportDraft.terrainMode?'ÖPPNA I EDITORN':'SKAPA PASS'}</button></div></div>`;
 }
 function refreshMusicStats(){const el=document.querySelector('#musicStats');if(!el)return;const c=musicCounts(musicImportDraft.items);el.innerHTML=`<b>${c.tracks} låtar</b><span>${c.pauses} pauser</span><span>${fmt(c.total)}</span>`}
