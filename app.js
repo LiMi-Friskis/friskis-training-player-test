@@ -29,8 +29,8 @@ const sec=t=>{let [m,s]=String(t).split(':').map(Number);return (m||0)*60+(s||0)
 const fmt=s=>`${Math.floor(Math.max(0,s)/60)}:${String(Math.max(0,s)%60).padStart(2,'0')}`;
 function color(b){b=+b;if(b<=9)return'#7DD3FC';if(b<=12)return'#2563EB';if(b<=14)return'#22C55E';if(b<=17)return'#FACC15';if(b<=19)return'#EF4444';return'#5B0A0A'}
 function total(p){return p.parts.reduce((a,x)=>a+sec(x.time),0)}
-function setBrand(title='FRISKIS TRAINING PLAYER',sub='BETA 1.02.2'){brandTitle.textContent=title;brandSub.innerHTML=sub;brandSub.style.display=sub?'block':'none'}
-function setAppBrand(){setBrand('FRISKIS TRAINING PLAYER','BETA 1.02.2')}
+function setBrand(title='FRISKIS TRAINING PLAYER',sub='BETA 1.03 · TEST 3'){brandTitle.textContent=title;brandSub.innerHTML=sub;brandSub.style.display=sub?'block':'none'}
+function setAppBrand(){setBrand('FRISKIS TRAINING PLAYER','BETA 1.03 · TEST 3')}
 function setHomeButton(show=true){homeBtn.style.display=show?'inline-block':'none'}
 function cache(){localStorage.setItem(KEY,JSON.stringify(passes))}
 function loadCache(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}}
@@ -239,10 +239,51 @@ let musicSelectedFiles=[];
 function showMusicImport(){
   if(!auth){login();return}
   if(!isSuper()){alert('Filimport kräver Super User.');return}
-  stop();setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.02');setHomeButton(true);musicImportDraft=null;musicSelectedFiles=[];
+  stop();setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);musicImportDraft=null;musicSelectedFiles=[];
   app.innerHTML=`${userTools()}<div class="music-import-shell"><div class="music-step">1 AV 3 · FILER</div><h1>Skapa pass från fil</h1><p class="muted">Importera träningsscheman eller musiklistor som PDF, PNG, JPG eller WEBP. Sidnummer används för att sortera schemat.</p>
   <div class="music-upload-card"><label class="music-drop" id="musicDropZone" for="musicScreenshots" ondragenter="musicDragEnter(event)" ondragover="musicDragOver(event)" ondragleave="musicDragLeave(event)" ondrop="musicDrop(event)"><b>📄 Dra filer hit eller klicka för att välja</b><span>PDF, PNG, JPG, WEBP · högst 10 filer</span></label><input id="musicScreenshots" class="sr-only" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" multiple onchange="setMusicFiles(this.files)"><div id="musicFilePreview" class="music-file-preview"></div></div>
+  <div class="music-upload-card"><h3>Terrängpass från två underlag</h3><p class="muted">Har du en separat musiklista och ett handskrivet schema? Använd kombinerad import för att matcha dem låt för låt.</p><button onclick="showCombinedTerrainImport()">KOMBINERA MUSIKLISTA + TRÄNINGSSCHEMA</button></div>
   <div class="actions"><button class="primary" id="analyzeMusicBtn" onclick="analyzeMusicScreenshots()">ANALYSERA FILER</button><button onclick="list()">AVBRYT</button></div><div class="muted music-privacy">Filerna skickas för AI-analys men sparas inte som filer i Training Player.</div></div>`;
+}
+let combinedMusicFiles=[],combinedScheduleFiles=[];
+function showCombinedTerrainImport(){
+ if(!isSuper())return;
+ setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);
+ app.innerHTML=`${userTools()}<div class="music-import-shell"><div class="music-step">TERRÄNGPASS · TVÅ UNDERLAG</div><h1>Kombinera musik och träningsschema</h1><p class="muted">En låt motsvarar ett intervall. Låtarnas tider gäller; schemat ger moment och föreslagen intensitet. Granska alltid AI-tolkningen.</p><div class="music-upload-card"><label><b>1. Musiklista (PDF eller bild)</b></label><input type="file" accept="application/pdf,image/*" multiple onchange="combinedMusicFiles=[...this.files]"></div><div class="music-upload-card"><label><b>2. Träningsschema (PDF eller bild)</b></label><input type="file" accept="application/pdf,image/*" multiple onchange="combinedScheduleFiles=[...this.files]"><p class="muted">Handskrivna scheman utan tydliga tabeller kan behöva kompletteras manuellt.</p></div><div class="actions"><button class="primary" id="combinedAnalyze" onclick="analyzeCombinedTerrain()">ANALYSERA OCH MATCHA</button><button onclick="showMusicImport()">TILLBAKA</button></div></div>`;
+}
+function terrainSuggestedBorg(row,previous=12){
+ const direct=scheduleMidpoint(row?.borg);if(direct!=null)return Math.max(6,Math.min(20,direct));
+ const t=[row?.moment,row?.description,row?.instruction].filter(Boolean).join(' ').toLowerCase();
+ if(/nedvarv|återhämt|vila|uppvärm|lätt|lätta|nedför/.test(t))return /nedvarv|vila/.test(t)?9:11;
+ if(/brant|mycket tung|sprint|max/.test(t))return 18;
+ if(/tung|backe|uppför|motstånd/.test(t))return 16;
+ if(/öka|kadens|tempo|snabb/.test(t))return 14;
+ return previous;
+}
+async function combinedUploads(files){
+ if(!files.length||files.length>10||files.some(f=>!validMusicImageFile(f)||f.size>10*1024*1024))throw Error('Välj 1–10 PDF- eller bildfiler, högst 10 MB per fil.');
+ const uploads=[];for(const f of files)uploads.push({name:f.name,data_url:f.type==='application/pdf'||/\.pdf$/i.test(f.name)?await fileAsDataUrl(f):await optimizedImageDataUrl(f)});
+ return musicImportEdge({files:uploads,title_hint:''});
+}
+async function analyzeCombinedTerrain(){
+ const btn=document.querySelector('#combinedAnalyze');if(!combinedMusicFiles.length||!combinedScheduleFiles.length){alert('Välj både musiklista och träningsschema.');return}
+ btn.disabled=true;btn.textContent='ANALYSERAR…';
+ try{
+  const music=await combinedUploads(combinedMusicFiles);
+  const tracks=(music.items||[]).filter(x=>x.type==='track');
+  if(!tracks.length)throw Error('Kunde inte identifiera låtar i musiklistan.');
+  let schedule=null,warning='';
+  try{schedule=await combinedUploads(combinedScheduleFiles)}catch(e){warning='Schemat kunde inte tolkas automatiskt: '+e.message}
+  const rows=schedule?.schedule_rows||[];
+  if(!rows.length)warning=warning||'Det handskrivna schemat gav inga strukturerade träningsrader. Fyll i moment och Borg manuellt i tabellen.';
+  let previous=12;
+  const items=tracks.map((x,i)=>{
+   const row=rows[i]||{};const borg=terrainSuggestedBorg(row,previous);previous=borg;
+   return {...x,_id:crypto.randomUUID(),terrainBorg:borg,terrainMoment:String(row.moment||row.description||'').trim(),order:i+1};
+  });
+  musicImportDraft={title:music.source_title||'Terrängpass',items,terrainMode:true,combinedMode:true,combinedWarning:warning,combinedScheduleCount:rows.length,deduplicated_count:music.deduplicated_count||0,screenshot_count:combinedMusicFiles.length};
+  showMusicImportPreview();
+ }catch(e){alert('Kombinerad import misslyckades: '+e.message);btn.disabled=false;btn.textContent='ANALYSERA OCH MATCHA'}
 }
 function validMusicImageFile(f){return f&&(/^(image\/(png|jpeg|webp)|application\/pdf)$/i.test(f.type)||/\.pdf$/i.test(f.name))}
 function setMusicFiles(files){const incoming=[...(files||[])];if(!incoming.length)return;
@@ -321,7 +362,7 @@ function chooseScheduleIntensity(){
  const ftp=d.rows.some(r=>r.ftp_percent!=null&&r.ftp_percent!=='');
  if(!borg&&!ftp){alert('Inga Borg- eller FTP-värden hittades. Kontrollera underlaget.');return}
  if(borg&&ftp){
-  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.02');setHomeButton(true);
+  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);
   app.innerHTML=`<div class="music-import-shell" style="max-width:680px;margin:8vh auto"><div class="music-step">VÄLJ INTENSITETSMODELL</div><h1>Borg och FTP har upptäckts</h1><p class="muted">Vilken intensitetsmodell vill du använda för det importerade passet?</p><div class="actions"><button class="primary" onclick="openImportedSchedule('borg')">BORG (6–20)</button><button class="primary" onclick="openImportedSchedule('ftp')">% FTP</button><button onclick="showMusicImport()">AVBRYT</button></div></div>`;
  }else openImportedSchedule(borg?'borg':'ftp');
 }
@@ -379,8 +420,9 @@ function createTerrainDraftFromMusic(){
 }
 function showMusicImportPreview(){
   if(!musicImportDraft){showMusicImport();return}
-  setBrand('FRISKIS TRAINING PLAYER','MUSIC IMPORT v0.1');setHomeButton(true);const c=musicCounts(musicImportDraft.items);
+  setBrand('FRISKIS TRAINING PLAYER','FILIMPORT · BETA 1.03 TEST 3');setHomeButton(true);const c=musicCounts(musicImportDraft.items);
   app.innerHTML=`${userTools()}<div class="music-import-shell wide"><div class="music-step">2 AV 3 · GRANSKA</div><div class="toprow"><div><h1>${escAttr(musicImportDraft.title)}</h1><div class="muted">Kontrollera AI-tolkningen innan passet skapas.${musicImportDraft.deduplicated_count?` · ${musicImportDraft.deduplicated_count} överlappande poster togs bort.`:''}</div></div><div id="musicStats" class="music-stats"><b>${c.tracks} låtar</b><span>${c.pauses} pauser</span><span>${fmt(c.total)}</span></div></div>
+  ${musicImportDraft.combinedMode?`<p class="muted"><b>Matchning:</b> ${musicImportDraft.items.length} låtar · ${musicImportDraft.combinedScheduleCount} schemarader. ${escAttr(musicImportDraft.combinedWarning||"Borg-värden utan angiven siffra är förslag, inte uppmätta värden.")}</p>`:""}
   <label class="music-terrain-choice"><input type="checkbox" ${musicImportDraft.terrainMode?'checked':''} onchange="setTerrainMusicMode(this.checked)"> En låt per intervall – skapa Terrängprofil (Borg)</label>
   ${musicImportDraft.terrainMode?`<p class="muted">Fyll i eller justera Borg och terrängmoment för varje låt. Låttiderna blir intervalltider. Passet öppnas i editorn utan att sparas.</p><div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Låt</th><th>Tid</th><th>Borg</th><th>Terräng / moment</th></tr></thead><tbody>${musicImportDraft.items.filter(x=>x.type==='track').map((x,i)=>`<tr><td>${i+1}</td><td>${escAttr(musicTrackDescription(x))}</td><td>${musicDurationText(x.duration_sec)}</td><td><input type="number" min="6" max="20" style="width:75px" value="${Number(x.terrainBorg??12)}" onchange="this.value=Math.max(6,Math.min(20,Number(this.value)||12));musicImportDraft.items.find(y=>y._id==='${x._id}').terrainBorg=Number(this.value)"></td><td><input placeholder="T.ex. Raksträcka, Backe – sittande" value="${escAttr(x.terrainMoment||'')}" oninput="musicImportDraft.items.find(y=>y._id==='${x._id}').terrainMoment=this.value"></td></tr>`).join('')}</tbody></table></div>`:`<div class="music-preview-table"><table class="admin-table"><thead><tr><th>#</th><th>Typ</th><th>Artist</th><th>Titel</th><th>Tid</th><th>Status</th><th></th></tr></thead><tbody>${musicImportDraft.items.map(musicPreviewRow).join('')}</tbody></table></div>`}
   <div class="music-preview-actions"><button onclick="addMusicItem('track')">+ LÅT</button><button onclick="addMusicItem('pause')">+ PAUSE</button><span class="spacer"></span><button onclick="showMusicImport()">TILLBAKA</button><button class="primary" onclick="${musicImportDraft.terrainMode?'createTerrainDraftFromMusic()':'createPassFromMusic()'}">${musicImportDraft.terrainMode?'ÖPPNA I EDITORN':'SKAPA PASS'}</button></div></div>`;
@@ -469,7 +511,7 @@ async function updateAutoProSetting(input){
   finally{input.disabled=false}
 }
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
-function showHelp(){setAppBrand();setHomeButton(true);app.innerHTML=`<div class="helpbox"><h1>Friskis Training Player</h1><p><b>Beta 1.03 · utvecklingsversion</b></p><p>Skapa, redigera och kör träningspass med valbar aktivitet och intensitetsmodell. Borg använder exakta nivåer och FTP zoner i % FTP.</p><p class="muted">Admin och Super User kan under Registervård administrera aktiviteter, intensitetsmodeller, intensitetsvärden, moment och beskrivningsförslag.</p><p class="muted">Publika pass kan köras utan inloggning. Inloggning krävs för att skapa eller redigera pass.</p><h3>Om</h3><p>Utvecklad av LiMi Equus AB</p><div class="copyright">© 2026 LiMi Equus AB. Alla rättigheter förbehållna.</div><div class="actions"><button class="primary" onclick="list()">MINA PASS</button></div></div>`}
+function showHelp(){setAppBrand();setHomeButton(true);app.innerHTML=`<div class="helpbox"><h1>Friskis Training Player</h1><p><b>Beta 1.03 · Test 3</b></p><p>Skapa, redigera och kör träningspass med valbar aktivitet och intensitetsmodell. Borg använder exakta nivåer och FTP zoner i % FTP.</p><p class="muted">Admin och Super User kan under Registervård administrera aktiviteter, intensitetsmodeller, intensitetsvärden, moment och beskrivningsförslag.</p><p class="muted">Publika pass kan köras utan inloggning. Inloggning krävs för att skapa eller redigera pass.</p><h3>Om</h3><p>Utvecklad av LiMi Equus AB</p><div class="copyright">© 2026 LiMi Equus AB. Alla rättigheter förbehållna.</div><div class="actions"><button class="primary" onclick="list()">MINA PASS</button></div></div>`}
 
 function fmtDateTime(value){
   if(!value)return '—';
