@@ -531,7 +531,7 @@ async function updateAutoProSetting(input){
   finally{input.disabled=false}
 }
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
-function showHelp(){setAppBrand();setHomeButton(true);app.innerHTML=`<div class="helpbox"><h1>Friskis Training Player</h1><p><b>Beta 1.03 · Test 3.1</b></p><p>Skapa, redigera och kör träningspass med valbar aktivitet och intensitetsmodell. Borg använder exakta nivåer och FTP zoner i % FTP.</p><p class="muted">Admin och Super User kan under Registervård administrera aktiviteter, intensitetsmodeller, intensitetsvärden, moment och beskrivningsförslag.</p><p class="muted">Publika pass kan köras utan inloggning. Inloggning krävs för att skapa eller redigera pass.</p><h3>Om</h3><p>Utvecklad av LiMi Equus AB</p><div class="copyright">© 2026 LiMi Equus AB. Alla rättigheter förbehållna.</div><div class="actions"><button class="primary" onclick="list()">MINA PASS</button></div></div>`}
+function showHelp(){setAppBrand();setHomeButton(true);app.innerHTML=`<div class="helpbox"><h1>Friskis Training Player</h1><p><b>Beta 1.03 · Test 3.2</b></p><p>Skapa, redigera och kör träningspass med valbar aktivitet och intensitetsmodell. Borg använder exakta nivåer och FTP zoner i % FTP.</p><p class="muted">Admin och Super User kan under Registervård administrera aktiviteter, intensitetsmodeller, intensitetsvärden, moment och beskrivningsförslag.</p><p class="muted">Publika pass kan köras utan inloggning. Inloggning krävs för att skapa eller redigera pass.</p><h3>Om</h3><p>Utvecklad av LiMi Equus AB</p><div class="copyright">© 2026 LiMi Equus AB. Alla rättigheter förbehållna.</div><div class="actions"><button class="primary" onclick="list()">MINA PASS</button></div></div>`}
 
 function fmtDateTime(value){
   if(!value)return '—';
@@ -1020,7 +1020,7 @@ function modelName(p){return registries.models.find(x=>x.id===p.intensity_model_
 function list(){
   statsFinish(false);stop(); setAppBrand(); setHomeButton(false);
   const legacyCount=passes.filter(p=>p.legacyLocal).length;
-  app.innerHTML=`${userTools()}<div class="toprow"><div><h1>Mina pass</h1><div class="muted">${auth?'Inloggad som '+escAttr(currentProfile?.display_name||auth.user?.email||'användare')+' · '+roleLabel(currentProfile?.role):'Publika pass kan köras utan inloggning'} <span id="syncState" class="sync"><span class="sync-dot"></span></span></div></div><div class="toprow-actions">${isSuper()?`<button onclick="showMusicImport()">📄 SKAPA PASS FRÅN FIL</button>`:''}<button class="primary" onclick="${auth?'edit()':'login()'}">+ SKAPA NYTT PASS</button></div></div>
+  app.innerHTML=`${userTools()}<div class="toprow"><div><h1>Mina pass</h1><div class="muted">${auth?'Inloggad som '+escAttr(currentProfile?.display_name||auth.user?.email||'användare')+' · '+roleLabel(currentProfile?.role):'Publika pass kan köras utan inloggning'} <span id="syncState" class="sync"><span class="sync-dot"></span></span></div></div><div class="toprow-actions">${isSuper()?`<button onclick="showMusicImport()">📄 SKAPA PASS FRÅN FIL</button>`:''}${auth?`<button class="primary" onclick="edit()">+ SKAPA NYTT PASS</button>`:''}</div></div>
   ${legacyCount?`<div class="legacy-banner"><b>${legacyCount} äldre lokalt ${legacyCount===1?'pass':'sparade pass'} hittades.</b> Flytta ${legacyCount===1?'det':'dem'} till Mina Pass så sparas ${legacyCount===1?'det':'de'} centralt som Privat.</div>`:''}
   <div class="cards">${passes.map((p,i)=>`<div class="card"><h2>${escAttr(p.name)}</h2><div><span class="badge">${activityName(p)}</span><span class="badge">${modelName(p)}</span>${p.builtIn?`<span class="badge">Demo</span>`:`<span class="badge">${p.visibility==='private'?'🔒 Privat':'🌐 Publikt'}</span>`}${auth&&p.remote?`<span class="badge ownerbadge">👤 ${escAttr(ownerName(p))}</span>`:''}</div><div class="muted" style="margin-top:8px">${fmt(total(p))} · ${p.parts.length} delar</div>${p.legacyLocal?`<div class="pass-storage legacy"><i></i>Äldre lokalt pass · flytta till Mina Pass</div>`:p.remote?`<div class="pass-storage remote"><i></i>Centralt sparat</div>`:''}${profileMarkup(p,'mini')}
   <div class="actions"><button class="primary" onclick="run(${i})">▶ KÖR PASSET</button>${isSuper()&&p.remote&&!p.legacyLocal?`<button class="pro-button" onclick="runWithPro(${i})">📱 KÖR MED PRO</button>`:''}${p.legacyLocal?`${auth?`<button onclick="importLocalPass(${i})">SPARA SOM PRIVAT</button>`:`<button onclick="login()">LOGGA IN FÖR ATT SPARA</button>`}`:auth&&canEditPass(p)?`<button onclick="edit(${i})">REDIGERA</button><button onclick="duplicate(${i})">DUPLICERA</button><button onclick="del(${i})">RADERA</button>`:auth&&(p.remote||p.builtIn)?`<button onclick="duplicate(${i})">DUPLICERA</button>`:''}</div></div>`).join('')}</div>`;
@@ -1603,14 +1603,13 @@ function drawLive(){
   renderPlayerFrame(`${switchButton}
   <div class="live">
     <div class="liveTop">
-      <div class="liveBrand"></div>
+      <div class="liveTotal"><div class="label">TOTALT KVAR</div><div class="liveTotalTime">${fmt(remain)}</div></div>
       <div class="current">
         <div class="label">${terrainEnabled(p)?'TERRÄNG':intensityHeading(p)}</div>
         <div class="borgBig ${zoneTextClass(p,s.part)}" style="color:${intensityColor(p,s.part)}">${terrainEnabled(p)?escAttr(terrainName(s.part)):intensityShort(p,s.part)}</div>
         ${!terrainEnabled(p)&&intensityRange(p,s.part)?`<div class="intensity-range current-range">${intensityRange(p,s.part)}</div>`:''}
         <div class="count">${fmt(s.left)}</div>
         <div class="remain">KVAR</div>
-        <div class="totalRemain"><b>${fmt(remain)}</b> KVAR AV PASSET</div>
       </div>
       <div class="next">
         <div class="label">NÄSTA</div>

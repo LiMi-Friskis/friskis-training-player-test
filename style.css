@@ -511,3 +511,36 @@ select.borginput{
 /* Beta 1.03 test: terrain import mode */
 .music-terrain-choice{display:flex;align-items:center;gap:12px;margin:18px 0;padding:15px 18px;border:1px solid #34414a;border-radius:12px;background:#172027;font-weight:700;cursor:pointer}
 .music-terrain-choice input{width:20px;height:20px;accent-color:#ed1639}
+
+/* Beta 1.03 Test 3.2 — compact, height-aware clean player. No changes to timing or bar geometry. */
+body:has(.live) main{padding-top:clamp(10px,2vh,22px);padding-bottom:12px}
+body:has(.live) footer{position:static;padding:8px 4vw;font-size:11px;background:transparent}
+.liveTop{--live-borg-size:clamp(68px, min(9vw, 13vh), 120px);--live-count-size:clamp(66px, min(9vw, 12vh), 112px);--live-time-row:calc(22px + var(--live-borg-size)*.9);grid-template-columns:1fr 1.3fr 1fr;gap:clamp(12px,2vw,30px)}
+.liveTop .borgBig{font-size:var(--live-borg-size)}
+.liveTop .count{font-size:var(--live-count-size)}
+.liveTotal,.liveTop .next{position:relative;text-align:left;min-width:0}
+.liveTotal .label{letter-spacing:3px;color:#b8bec2;font-weight:bold}
+.liveTotalTime{position:absolute;top:var(--live-time-row);left:0;font-size:clamp(28px,3vw,45px);font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.liveTop .next .time{position:absolute;top:var(--live-time-row);left:50px;margin:0;line-height:1.05;font-variant-numeric:tabular-nums}
+.liveTop .next .moment{margin-top:calc(var(--live-count-size)*1.05 + 10px)}
+.liveProfile{height:clamp(100px,22vh,210px);margin:clamp(10px,2vh,24px) 0 10px}
+.live .controls{margin-top:clamp(10px,2vh,22px);gap:clamp(8px,1.5vw,24px)}
+.live .controls button{padding:clamp(8px,1.3vh,12px) clamp(10px,1.5vw,20px)}
+@media(max-height:750px) and (min-width:801px){
+ .liveTop{--live-borg-size:clamp(60px,11vh,95px);--live-count-size:clamp(60px,11vh,94px)}
+ .liveTop .next .borg{font-size:clamp(28px,5vh,42px)}
+ .liveTop .next .time{font-size:clamp(30px,5vh,42px)}
+ .liveProfile{height:clamp(95px,19vh,160px)}
+ .live .controls button{font-size:15px;min-width:110px}
+}
+@media(max-width:800px){
+ .liveTop{grid-template-columns:1fr 1.3fr 1fr;gap:8px}
+ .liveTotal .label,.liveTop .current .label,.liveTop .next .label{letter-spacing:1px;font-size:11px}
+ .liveTotalTime{font-size:clamp(17px,4vw,30px)}
+ .liveTop .next{border-left:1px solid #778087;border-top:0;padding:0 0 0 10px;text-align:left}
+ .liveTop .next .borg{font-size:clamp(15px,3.5vw,30px)}
+ .liveTop .next .time{left:10px;font-size:clamp(17px,4vw,30px)}
+ .liveTop .next .moment{font-size:13px}
+ .liveTop{--live-borg-size:clamp(45px,10vw,80px);--live-count-size:clamp(44px,10vw,75px)}
+ .live .controls{flex-wrap:wrap}
+}
