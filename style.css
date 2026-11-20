@@ -1,6 +1,6 @@
 
 :root{--bg:#080b0e;--panel:#10161a;--line:#344047;--red:#ef1738;--text:#f5f6f7;--muted:#aeb6bb}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 15%,#131a1f,#06080a 60%);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+*{box-sizing:border-box}body{margin:0;background:#000000;color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
 header{height:82px;display:flex;align-items:center;justify-content:space-between;padding:10px 4vw;border-bottom:1px solid #20282d}.brand{display:flex;align-items:center;gap:14px}.brand img{width:58px;height:58px;object-fit:contain}.brand b{font-size:21px;letter-spacing:.8px}.brand small{display:block;margin-top:3px;letter-spacing:2px;color:#c9cdd0;line-height:1.25;font-size:9px}button{background:#171d21;border:1px solid #3b464d;color:white;border-radius:10px;padding:12px 20px;font-weight:700;cursor:pointer}button.primary{background:var(--red);border-color:var(--red)}button:hover{filter:brightness(1.15)}
 main{padding:28px 4vw 90px;max-width:1500px;margin:auto}h1{font-size:36px;margin:0 0 24px}.toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}.card{background:linear-gradient(145deg,#12191d,#0d1215);border:1px solid #303a40;border-radius:15px;padding:20px}.card h2{margin:0 0 5px}.muted{color:var(--muted)}.mini{height:90px;margin:16px 0;display:flex;align-items:end;gap:2px}.bar{min-width:2px;border-radius:3px 3px 0 0}
 .actions{display:flex;gap:10px;flex-wrap:wrap}.editor{background:#0e1417;border:1px solid #303a40;border-radius:15px;padding:22px}.name{width:100%;font-size:25px;background:#11171a;color:white;border:1px solid #3b464d;border-radius:8px;padding:12px;margin-bottom:18px}
@@ -544,3 +544,6 @@ body:has(.live) footer{position:static;padding:8px 4vw;font-size:11px;background
  .liveTop{--live-borg-size:clamp(45px,10vw,80px);--live-count-size:clamp(44px,10vw,75px)}
  .live .controls{flex-wrap:wrap}
 }
+
+/* Beta 1.03 Test 3.3 — black canvas and symmetric live-view separators */
+.liveTop .liveTotal{border-right:1px solid #778087;padding-right:clamp(12px,2vw,30px)}
