@@ -551,3 +551,14 @@ body:has(.live) footer{position:static;padding:8px 4vw;font-size:11px;background
 /* Beta 1.03 Test 3.4 — match left divider height to the right divider */
 .liveTop{align-items:stretch}
 .liveTop .liveTotal{align-self:stretch}
+
+
+/* Beta 1.03 Test 3.5 — raise total remaining time to align with the NEXT Borg value.
+   Keep the main countdown, chart geometry, and both full-height separators unchanged. */
+.liveTop .liveTotalTime{top:calc(22px + .12em);font-size:45px}
+@media(max-height:750px) and (min-width:801px){
+  .liveTop .liveTotalTime{font-size:clamp(30px,5vh,42px)}
+}
+@media(max-width:800px){
+  .liveTop .liveTotalTime{top:calc(14px + .12em);font-size:clamp(17px,4vw,30px)}
+}
