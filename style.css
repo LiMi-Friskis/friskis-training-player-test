@@ -562,3 +562,19 @@ body:has(.live) footer{position:static;padding:8px 4vw;font-size:11px;background
 @media(max-width:800px){
   .liveTop .liveTotalTime{top:calc(14px + .12em);font-size:clamp(17px,4vw,30px)}
 }
+
+/* Beta 1.03 – Test 3.6: responsive vertical use of available player space.
+   Playback timing, bar widths and marker positioning are unchanged. */
+body:has(.live){min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body:has(.live) > header{flex:0 0 auto}
+body:has(.live) > main{width:100%;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding-bottom:8px}
+body:has(.live) > main > .live{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body:has(.live) .liveTop{flex:0 0 auto}
+body:has(.live) .liveProfile{flex:1 1 160px;min-height:95px;max-height:none;height:auto;margin-top:clamp(10px,2vh,24px);margin-bottom:10px}
+body:has(.live) .live > .muted{flex:0 0 auto}
+body:has(.live) .live > .controls{flex:0 0 auto}
+body:has(.live) > footer{flex:0 0 auto;position:static}
+@media(max-height:650px){
+ body:has(.live) .liveProfile{min-height:65px;margin-top:8px;margin-bottom:6px}
+ body:has(.live) .live > .controls{margin-top:8px}
+}
